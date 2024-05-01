@@ -194,20 +194,20 @@ class MainWindow(QMainWindow):
         return combobox
 
     def load_original_data(self):
-        # 匹配当前目录下所有以'Result_'开头的txt文件
+        # 匹配当前目录下所有以 'Result_' 开头的 txt 文件
         result_files = glob.glob('Result_*.txt')
-        print("找到的文件：", result_files)  # 调试行，检查找到了哪些文件
-        all_data = []
+        self.all_data = []  # 清除现有数据
         for filename in result_files:
             try:
                 with open(filename, 'r') as file:
-                    all_data.append(file.read())
+                    # 假设文件包含以新行分隔的结果
+                    file_data = file.read().strip().split('\n')
+                    self.all_data.extend(file_data)
             except FileNotFoundError:
-                print("未找到文件：", filename)  # 调试行，如果文件未找到
-                continue
+                continue  # 如果文件未找到，跳过
 
-        if all_data:
-            self.original_display.setPlainText("\n\n".join(all_data))
+        if self.all_data:
+            self.original_display.setPlainText("\n\n".join(self.all_data))
         else:
             self.original_display.setPlainText("未找到结果文件。")
 
