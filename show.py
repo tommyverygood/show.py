@@ -58,26 +58,29 @@ def greedy_set_cover(cover_graph):
         covered.update(cover_graph[best_k_comb])
     return selected_k_combs
 
-def save_to_database(params, results):
-    filename = f"Result_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+def save_to_database(m, n, k, j, s, results):
+    filename = f"{m}_{n}_{k}_{j}_{s}.txt"  # 直接使用参数值创建文件名
     with open(filename, "w") as f:
-        f.write(f"{params}: {results}\n")
+        f.write(f"{m}, {n}, {k}, {j}, {s}: {results}\n")
+    return filename  # 返回生成的文件名以便于其他地方使用
+
 
 class AlgorithmWorker(QThread):
     finished = pyqtSignal(list, list, str)
 
-    def __init__(self, n_numbers, k, j, s):
+    def __init__(self, m, n, k, j, s):
         super().__init__()
-        self.n_numbers = n_numbers
+        self.m = m
+        self.n = n
         self.k = k
         self.j = j
         self.s = s
-
     def run(self):
-        cover_graph = subset_cover_graph(self.n_numbers, self.k, self.j, self.s)
-        result = simulated_annealing(cover_graph, self.n_numbers)
-        params = f"{len(self.n_numbers)}-{self.k}-{self.j}-{self.s}"
-        self.finished.emit(self.n_numbers, result, params)
+        n_numbers = random.sample(range(1, self.m + 1), self.n)
+        cover_graph = subset_cover_graph(n_numbers, self.k, self.j, self.s)
+        result = simulated_annealing(cover_graph, n_numbers)
+        params = f"{self.m}-{self.n}-{self.k}-{self.j}-{self.s}"
+        self.finished.emit(n_numbers, result, params)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -194,15 +197,15 @@ class MainWindow(QMainWindow):
         return combobox
 
     def load_original_data(self):
-        # 匹配当前目录下所有以 'Result_' 开头的 txt 文件
-        result_files = glob.glob('Result_*.txt')
+        result_files = glob.glob('*_*_*_*_*.txt')
         self.all_data = []  # 清除现有数据
         for filename in result_files:
             try:
                 with open(filename, 'r') as file:
-                    # 假设文件包含以新行分隔的结果
                     file_data = file.read().strip().split('\n')
-                    self.all_data.extend(file_data)
+                    for line in file_data:
+                        if line:
+                            self.all_data.append(line)  # 确保添加的是字符串
             except FileNotFoundError:
                 continue  # 如果文件未找到，跳过
 
@@ -234,7 +237,7 @@ class MainWindow(QMainWindow):
         for data_string in self.all_data:
             try:
                 # 将数据字符串转换为整数列表
-                numbers = list(map(int, data_string.split(', ')))
+                numbers = list(map(int, data_string.split(',')))  # 确保使用正确的分隔符
                 # 检查每个指定位置的数字是否匹配用户输入
                 if all(numbers[pos] == target for pos, target in zip(positions, target_numbers)):
                     filtered_results.append(numbers)
@@ -293,6 +296,18 @@ class MainWindow(QMainWindow):
         combobox.setFixedWidth(150)
         return combobox
 
+    def update_result(self, n_numbers, result, params):
+        self.all_data.append(result)  # 添加新结果到列表
+        result_display = "\n".join(f"Combination {idx + 1}: {comb}" for idx, comb in enumerate(result))
+
+        # 解析参数
+        m, n, k, j, s = params.split('-')
+        # 保存结果并获取实际保存的文件名
+        actual_filename = save_to_database(int(m), int(n), int(k), int(j), int(s), result)
+
+        # 在文本框中显示结果和文件名
+        self.result_text_edit.setText(
+            f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\nThe approximate minimal set cover of k samples combinations found:\n{result_display}\n\nFile saved as: {actual_filename}")
     def start_thread(self):
         m = int(self.m_input.currentText()) if self.m_input.currentText() else 0
         n = int(self.n_input.currentText()) if self.n_input.currentText() else 0
@@ -301,17 +316,9 @@ class MainWindow(QMainWindow):
         s = int(self.s_input.currentText()) if self.s_input.currentText() else 0
 
         if m > 0 and n > 0 and k > 0 and j > 0 and s > 0:
-            n_numbers = random.sample(range(1, m + 1), n)
-            self.worker = AlgorithmWorker(n_numbers, k, j, s)
+            self.worker = AlgorithmWorker(m, n, k, j, s)
             self.worker.finished.connect(self.update_result)
             self.worker.start()
-
-    def update_result(self, n_numbers, result, params):
-        self.all_data.append(result)  # 添加新结果到列表
-        result_display = "\n".join(f"Combination {idx + 1}: {comb}" for idx, comb in enumerate(result))
-        self.result_text_edit.setText(
-            f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\nThe approximate minimal set cover of k samples combinations found:\n{result_display}")
-        save_to_database(params, result)
 
     def update_j_options(self):
         self.j_input.clear()
