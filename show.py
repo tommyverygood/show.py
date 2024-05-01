@@ -216,7 +216,7 @@ class MainWindow(QMainWindow):
 
     def filter_results(self):
         try:
-            # 从界面获取位置和数字
+            # 从用户输入中提取位置和目标数字
             positions = [
                 int(self.position_combobox1.currentText()) - 1,
                 int(self.position_combobox2.currentText()) - 1,
@@ -228,33 +228,34 @@ class MainWindow(QMainWindow):
                 int(self.input_number3.text())
             ]
         except ValueError:
-            # 如果输入不是有效的数字，显示错误消息
-            self.results_display.setPlainText("Please enter valid numbers in all fields.")
+            # 如果输入无效，显示错误消息
+            self.results_display.setPlainText("请在所有字段中输入有效数字。")
             return
 
-        filtered_results = []
-        # 遍历所有数据集
-        for data_string in self.all_data:
-            # 拆分头部和数值组合部分
-            header, values_part = data_string.split(':')
-            try:
-                # 将数值部分拆分并转换为整数列表，需要处理可能存在的嵌套列表
-                values_list = eval(values_part.strip())
-                for sublist in values_list:
-                    # 确保每个子列表足够长以供索引
-                    if len(sublist) >= max(positions) + 1:
-                        # 检查指定位置的数值是否与用户输入匹配
+        # 根据 m, n, k, j, s 输入构造文件名
+        m, n, k, j, s = [self.m_input.currentText(), self.n_input.currentText(),
+                         self.k_input.currentText(), self.j_input.currentText(), self.s_input.currentText()]
+        filename = f"{m}_{n}_{k}_{j}_{s}.txt"
+
+        # 尝试打开相应文件并过滤结果
+        try:
+            with open(filename, 'r') as file:
+                file_data = file.read().strip().split('\n')
+                filtered_results = []
+                for line in file_data:
+                    _, values_part = line.split(':')
+                    values_list = eval(values_part.strip())
+                    for sublist in values_list:
                         if all(sublist[pos] == num for pos, num in zip(positions, target_numbers)):
                             filtered_results.append(sublist)
-            except (SyntaxError, ValueError) as e:
-                continue  # 如果转换失败或者索引错误，跳过这个数据集
+                if filtered_results:
+                    result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
+                    self.results_display.setPlainText(result_display)
+                else:
+                    self.results_display.setPlainText("未找到符合条件的结果。")
+        except FileNotFoundError:
+            self.results_display.setPlainText("未找到指定的文件。")
 
-        if filtered_results:
-            # 如果找到匹配的数据集，格式化并显示
-            result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
-            self.results_display.setPlainText(result_display)
-        else:
-            self.results_display.setPlainText("No results found matching the criteria.")
 
     def init_database_ui(self):
         self.database_widget = QWidget()
