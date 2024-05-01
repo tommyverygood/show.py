@@ -212,18 +212,37 @@ class MainWindow(QMainWindow):
             self.original_display.setPlainText("未找到结果文件。")
 
     def filter_results(self):
-        positions = [int(self.position_combobox1.currentText()) - 1,
-                     int(self.position_combobox2.currentText()) - 1,
-                     int(self.position_combobox3.currentText()) - 1]
-        target_numbers = [int(self.input_number1.text()), int(self.input_number2.text()),
-                          int(self.input_number3.text())]
+        try:
+            # 从界面获取位置和数字
+            positions = [
+                int(self.position_combobox1.currentText()) - 1,
+                int(self.position_combobox2.currentText()) - 1,
+                int(self.position_combobox3.currentText()) - 1
+            ]
+            target_numbers = [
+                int(self.input_number1.text()),
+                int(self.input_number2.text()),
+                int(self.input_number3.text())
+            ]
+        except ValueError:
+            # 如果输入不是有效的数字，显示错误消息
+            self.results_display.setPlainText("Please enter valid numbers in all fields.")
+            return
 
         filtered_results = []
-        for data_set in self.all_data:
-            if all(data_set[pos] == target for pos, target in zip(positions, target_numbers)):
-                filtered_results.append(data_set)
+        # 遍历所有数据集，这假设`all_data`是正确加载的数据列表
+        for data_string in self.all_data:
+            try:
+                # 将数据字符串转换为整数列表
+                numbers = list(map(int, data_string.split(', ')))
+                # 检查每个指定位置的数字是否匹配用户输入
+                if all(numbers[pos] == target for pos, target in zip(positions, target_numbers)):
+                    filtered_results.append(numbers)
+            except ValueError:
+                continue  # 如果转换失败，跳过这个数据集
 
         if filtered_results:
+            # 如果找到匹配的数据集，格式化并显示
             result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
             self.results_display.setPlainText(result_display)
         else:
