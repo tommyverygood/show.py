@@ -233,16 +233,21 @@ class MainWindow(QMainWindow):
             return
 
         filtered_results = []
-        # 遍历所有数据集，这假设`all_data`是正确加载的数据列表
+        # 遍历所有数据集
         for data_string in self.all_data:
+            # 拆分头部和数值组合部分
+            header, values_part = data_string.split(':')
             try:
-                # 将数据字符串转换为整数列表
-                numbers = list(map(int, data_string.split(',')))  # 确保使用正确的分隔符
-                # 检查每个指定位置的数字是否匹配用户输入
-                if all(numbers[pos] == target for pos, target in zip(positions, target_numbers)):
-                    filtered_results.append(numbers)
-            except ValueError:
-                continue  # 如果转换失败，跳过这个数据集
+                # 将数值部分拆分并转换为整数列表，需要处理可能存在的嵌套列表
+                values_list = eval(values_part.strip())
+                for sublist in values_list:
+                    # 确保每个子列表足够长以供索引
+                    if len(sublist) >= max(positions) + 1:
+                        # 检查指定位置的数值是否与用户输入匹配
+                        if all(sublist[pos] == num for pos, num in zip(positions, target_numbers)):
+                            filtered_results.append(sublist)
+            except (SyntaxError, ValueError) as e:
+                continue  # 如果转换失败或者索引错误，跳过这个数据集
 
         if filtered_results:
             # 如果找到匹配的数据集，格式化并显示
