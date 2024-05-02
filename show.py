@@ -261,6 +261,7 @@ class MainWindow(QMainWindow):
             self.results_display.setPlainText("请在所有字段中输入有效数字。")
             return
 
+
         filtered_results = []
         for line in self.all_data:
             try:
