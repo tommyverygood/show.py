@@ -1,6 +1,9 @@
 import random, glob, datetime, sys, itertools, math, time
 from collections import defaultdict
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit, QLineEdit, QComboBox, QHBoxLayout, QScrollArea, QTextBrowser,  QStackedWidget, QLabel
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout,
+                             QWidget, QTextEdit, QLineEdit, QComboBox, QHBoxLayout,
+                             QScrollArea, QTextBrowser, QStackedWidget, QLabel, QFileDialog)
+
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 
 def generate_combinations(elements, k):
@@ -167,6 +170,16 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.input_number3)
         optimal_selection_layout.addLayout(input_layout)
 
+        # 添加文件夹选择按钮和输入框
+        folder_selection_layout = QHBoxLayout()
+        self.folder_input = QLineEdit()
+        select_folder_btn = QPushButton("Select Folder")
+        select_folder_btn.clicked.connect(self.select_folder)
+        folder_selection_layout.addWidget(self.folder_input)
+        folder_selection_layout.addWidget(select_folder_btn)
+
+        optimal_selection_layout.addLayout(folder_selection_layout)
+
         # 筛选按钮
         filter_button = QPushButton('Filter Results')
         filter_button.clicked.connect(self.filter_results)
@@ -185,6 +198,23 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.optimal_selection_widget)
 
         self.load_original_data()
+
+    def select_folder(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select a text file", "",
+                                                   "Text Files (*.txt)", options=options)
+        if file_name:
+            self.folder_input.setText(file_name)
+            self.load_file_data(file_name)
+
+    def load_file_data(self, file_path):
+        try:
+            with open(file_path, 'r') as file:
+                self.all_data = file.readlines()
+            self.original_display.setPlainText(''.join(self.all_data))
+        except FileNotFoundError:
+            self.original_display.setPlainText("Selected file not found.")
 
     def show_optimal_selection_ui(self):
         # 显示新界面
@@ -228,34 +258,28 @@ class MainWindow(QMainWindow):
                 int(self.input_number3.text())
             ]
         except ValueError:
-            # 如果输入无效，显示错误消息
             self.results_display.setPlainText("请在所有字段中输入有效数字。")
             return
 
-        # 根据 m, n, k, j, s 输入构造文件名
-        m, n, k, j, s = [self.m_input.currentText(), self.n_input.currentText(),
-                         self.k_input.currentText(), self.j_input.currentText(), self.s_input.currentText()]
-        filename = f"{m}_{n}_{k}_{j}_{s}.txt"
+        filtered_results = []
+        for line in self.all_data:
+            try:
+                # 从每一行中解析出数据部分
+                _, data_str = line.split(':')
+                data = eval(data_str.strip())  # 安全风险，仅在可信数据上使用
+                # 筛选匹配的序列
+                for tuple in data:
+                    if all(tuple[pos] == num for pos, num in zip(positions, target_numbers)):
+                        filtered_results.append(tuple)
+            except Exception as e:
+                self.results_display.setPlainText(f"解析错误: {str(e)}")
+                return
 
-        # 尝试打开相应文件并过滤结果
-        try:
-            with open(filename, 'r') as file:
-                file_data = file.read().strip().split('\n')
-                filtered_results = []
-                for line in file_data:
-                    _, values_part = line.split(':')
-                    values_list = eval(values_part.strip())
-                    for sublist in values_list:
-                        if all(sublist[pos] == num for pos, num in zip(positions, target_numbers)):
-                            filtered_results.append(sublist)
-                if filtered_results:
-                    result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
-                    self.results_display.setPlainText(result_display)
-                else:
-                    self.results_display.setPlainText("未找到符合条件的结果。")
-        except FileNotFoundError:
-            self.results_display.setPlainText("未找到指定的文件。")
-
+        if filtered_results:
+            result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
+            self.results_display.setPlainText(result_display)
+        else:
+            self.results_display.setPlainText("未找到符合条件的结果。")
 
     def init_database_ui(self):
         self.database_widget = QWidget()
