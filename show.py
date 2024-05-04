@@ -94,6 +94,7 @@ class MainWindow(QMainWindow):
         self.init_solver_ui()
         self.init_database_ui()
         self.init_optimal_selection_ui()
+        self.init_more3_ui()  # 确保这一行在这里，以初始化 more3 界面
         self.setCentralWidget(self.stacked_widget)
         self.all_data = []  # 初始化数据存储列表
     def init_solver_ui(self):
@@ -347,29 +348,109 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.more2_widget)
 
     def init_more3_ui(self):
-        self.more3_widget = QWidget()
-        more3_layout = QVBoxLayout(self.more3_widget)
+            self.more3_widget = QWidget()
+            more3_layout = QVBoxLayout(self.more3_widget)
 
-        title_label = QLabel('Welcome to the more3 interface!', self.more3_widget)
-        title_label.setAlignment(Qt.AlignCenter)
-        more3_layout.addWidget(title_label)
+            title_label = QLabel('Expectation filtering', self.more3_widget)
+            title_label.setAlignment(Qt.AlignCenter)
+            more3_layout.addWidget(title_label)
 
-        # 可以根据需要添加更多的控件
-        info_label = QLabel('This is the more3 page.', self.more3_widget)
-        more3_layout.addWidget(info_label)
+            # 第一行选择框
+            selection_layout = QHBoxLayout()
+            self.position_combobox1_more3 = self.create_number_combobox(1, 6)
+            self.position_combobox2_more3 = self.create_number_combobox(1, 6)
+            self.position_combobox3_more3 = self.create_number_combobox(1, 6)
+            selection_layout.addWidget(self.position_combobox1_more3)
+            selection_layout.addWidget(self.position_combobox2_more3)
+            selection_layout.addWidget(self.position_combobox3_more3)
+            more3_layout.addLayout(selection_layout)
 
-        back_btn_more3 = QPushButton('Back', self.more3_widget)
-        back_btn_more3.clicked.connect(self.show_previous_ui)
-        more3_layout.addWidget(back_btn_more3)
+            # 第二行输入期望值
+            input_layout = QHBoxLayout()
+            self.target_sum_input = QLineEdit()
+            input_layout.addWidget(QLabel("Target Sum:"))
+            input_layout.addWidget(self.target_sum_input)
+            more3_layout.addLayout(input_layout)
 
-        self.stacked_widget.addWidget(self.more3_widget)
+            folder_selection_layout = QHBoxLayout()
+            self.folder_input_more3 = QLineEdit()
+            select_folder_btn_more3 = QPushButton("Select File")
+            select_folder_btn_more3.clicked.connect(self.select_folder_more3)
+            folder_selection_layout.addWidget(self.folder_input_more3)
+            folder_selection_layout.addWidget(select_folder_btn_more3)
+            more3_layout.addLayout(folder_selection_layout)
+
+            # 筛选按钮
+            filter_button = QPushButton('Filter Results')
+            filter_button.clicked.connect(self.filter_results_more3)
+            more3_layout.addWidget(filter_button)
+
+            self.original_display_more3 = QTextBrowser()
+            self.original_display_more3.setPlainText("Original Data Loading...")
+            more3_layout.addWidget(self.original_display_more3)
+
+            # 结果展示区域
+            self.results_display_more3 = QTextBrowser()
+            self.results_display_more3.setPlainText("Results will appear here...")
+            more3_layout.addWidget(self.results_display_more3)
+
+            # 返回按钮
+            back_btn_more3 = QPushButton('Back', self.more3_widget)
+            back_btn_more3.clicked.connect(self.show_previous_ui)
+            more3_layout.addWidget(back_btn_more3)
+
+            self.stacked_widget.addWidget(self.more3_widget)
+
+    def select_folder_more3(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select a text file", "",
+                                                   "Text Files (*.txt)", options=options)
+        if file_name:
+            self.folder_input_more3.setText(file_name)
+            self.load_file_data_more3(file_name)
+
+    def load_file_data_more3(self, file_path):
+        try:
+            with open(file_path, 'r') as file:
+                self.all_data = file.readlines()
+            self.original_display_more3.setPlainText(''.join(self.all_data))
+        except FileNotFoundError:
+            self.original_display_more3.setPlainText("Selected file not found.")
+
+    def filter_results_more3(self):
+        try:
+            positions = [
+                int(self.position_combobox1_more3.currentText()) - 1,
+                int(self.position_combobox2_more3.currentText()) - 1,
+                int(self.position_combobox3_more3.currentText()) - 1
+            ]
+            target_sum = int(self.target_sum_input.text())
+        except ValueError:
+            self.results_display_more3.setPlainText("Please ensure all inputs are valid integers.")
+            return
+
+        filtered_results = []
+        for line in self.all_data:
+            try:
+                _, data_str = line.split(':')
+                data = eval(data_str.strip())
+                for tuple in data:
+                    if sum(tuple[pos] for pos in positions) == target_sum:
+                        filtered_results.append(tuple)
+            except Exception as e:
+                self.results_display_more3.setPlainText(f"Error parsing data: {str(e)}")
+                return
+
+        if filtered_results:
+            result_display = "\n".join(str(res) for res in filtered_results)
+            self.results_display_more3.setPlainText(result_display)
+        else:
+            self.results_display_more3.setPlainText("No results found matching the target sum.")
 
     def show_more3_ui(self):
-        # 确保已经初始化了 more3 界面
         if not hasattr(self, 'more3_widget'):
-            self.init_more3_ui()
-
-        # 设置堆栈窗口小部件以显示新界面
+            self.init_more3_ui()  # 如果 more3_widget 未初始化，则先初始化
         self.stacked_widget.setCurrentWidget(self.more3_widget)
 
     def show_solver_ui(self):
