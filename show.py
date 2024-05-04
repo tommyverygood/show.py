@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
         solver_layout.addLayout(btn_layout)
         self.stacked_widget.addWidget(self.solver_widget)
 
+
     def init_optimal_selection_ui(self):
         self.optimal_selection_widget = QWidget()
         optimal_selection_layout = QVBoxLayout(self.optimal_selection_widget)
