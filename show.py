@@ -277,9 +277,17 @@ class MainWindow(QMainWindow):
         self.results_display_more2.setPlainText("Filtered Results Appear Here...")
         more2_layout.addWidget(self.results_display_more2)
 
+        button_layout = QHBoxLayout()
         back_btn_more2 = QPushButton('Back', self.more2_widget)
         back_btn_more2.clicked.connect(self.show_previous_ui)
-        more2_layout.addWidget(back_btn_more2)
+        button_layout.addWidget(back_btn_more2)
+
+        # 添加新的 "more3" 按钮
+        more3_btn = QPushButton('more3', self.more2_widget)
+        more3_btn.clicked.connect(self.show_more3_ui)
+        button_layout.addWidget(more3_btn)
+
+        more2_layout.addLayout(button_layout)
 
         self.stacked_widget.addWidget(self.more2_widget)
 
@@ -338,7 +346,31 @@ class MainWindow(QMainWindow):
         # 设置堆栈窗口小部件以显示新界面
         self.stacked_widget.setCurrentWidget(self.more2_widget)
 
+    def init_more3_ui(self):
+        self.more3_widget = QWidget()
+        more3_layout = QVBoxLayout(self.more3_widget)
 
+        title_label = QLabel('Welcome to the more3 interface!', self.more3_widget)
+        title_label.setAlignment(Qt.AlignCenter)
+        more3_layout.addWidget(title_label)
+
+        # 可以根据需要添加更多的控件
+        info_label = QLabel('This is the more3 page.', self.more3_widget)
+        more3_layout.addWidget(info_label)
+
+        back_btn_more3 = QPushButton('Back', self.more3_widget)
+        back_btn_more3.clicked.connect(self.show_previous_ui)
+        more3_layout.addWidget(back_btn_more3)
+
+        self.stacked_widget.addWidget(self.more3_widget)
+
+    def show_more3_ui(self):
+        # 确保已经初始化了 more3 界面
+        if not hasattr(self, 'more3_widget'):
+            self.init_more3_ui()
+
+        # 设置堆栈窗口小部件以显示新界面
+        self.stacked_widget.setCurrentWidget(self.more3_widget)
 
     def show_solver_ui(self):
         # 切换到求解界面
