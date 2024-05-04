@@ -262,15 +262,15 @@ class MainWindow(QMainWindow):
         folder_selection_layout.addWidget(select_folder_btn_more2)
         more2_layout.addLayout(folder_selection_layout)
 
-        # 原始数据展示区域
-        self.original_display_more2 = QTextBrowser()
-        self.original_display_more2.setPlainText("Original Data Loading...")
-        more2_layout.addWidget(self.original_display_more2)
-
         # 筛选按钮
         filter_button = QPushButton('Filter Results')
         filter_button.clicked.connect(self.filter_results_range_more2)
         more2_layout.addWidget(filter_button)
+
+        # 原始数据展示区域
+        self.original_display_more2 = QTextBrowser()
+        self.original_display_more2.setPlainText("Original Data Loading...")
+        more2_layout.addWidget(self.original_display_more2)
 
         # 筛选结果展示区域
         self.results_display_more2 = QTextBrowser()
