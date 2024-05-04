@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(start_btn)
         btn_layout.addWidget(database_btn)
 
-        way_btn = QPushButton('way', self)  # 新按钮
+        way_btn = QPushButton('more', self)  # 新按钮
         way_btn.clicked.connect(self.show_optimal_selection_ui)  # 连接到新界面显示的方法
         btn_layout.addWidget(way_btn)
 
@@ -198,6 +198,149 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.optimal_selection_widget)
 
         self.load_original_data()
+        back_btn = QPushButton('Back', self)  # 按钮文本设置为 "Back"
+        back_btn.clicked.connect(self.show_solver_ui)  # 点击后调用 show_solver_ui 函数
+        optimal_selection_layout.addWidget(back_btn)
+
+        self.stacked_widget.addWidget(self.optimal_selection_widget)
+
+        button_layout = QHBoxLayout()
+        optimal_selection_layout.addLayout(button_layout)
+
+        # 添加新的 "more2" 按钮
+        more2_btn = QPushButton('more2', self)
+        more2_btn.clicked.connect(self.show_more2_ui)
+        button_layout.addWidget(more2_btn)
+
+        self.stacked_widget.addWidget(self.optimal_selection_widget)
+
+    def init_more2_ui(self):
+        self.more2_widget = QWidget()
+        more2_layout = QVBoxLayout(self.more2_widget)
+
+        # 标题
+        title_label = QLabel('Welcome to the more2 interface!', self.more2_widget)
+        title_label.setAlignment(Qt.AlignCenter)
+        more2_layout.addWidget(title_label)
+
+        # 第一行选择框
+        selection_layout = QHBoxLayout()
+        self.position_combobox1_more2 = self.create_number_combobox(1, 6)
+        self.position_combobox2_more2 = self.create_number_combobox(1, 6)
+        self.position_combobox3_more2 = self.create_number_combobox(1, 6)
+        selection_layout.addWidget(self.position_combobox1_more2)
+        selection_layout.addWidget(self.position_combobox2_more2)
+        selection_layout.addWidget(self.position_combobox3_more2)
+        more2_layout.addLayout(selection_layout)
+
+        # 第二行输入框
+        input_layout = QHBoxLayout()
+        self.input_number1_more2 = QLineEdit()
+        self.input_number2_more2 = QLineEdit()
+        self.input_number3_more2 = QLineEdit()
+        input_layout.addWidget(self.input_number1_more2)
+        input_layout.addWidget(self.input_number2_more2)
+        input_layout.addWidget(self.input_number3_more2)
+        more2_layout.addLayout(input_layout)
+
+        # 文件选择按钮和输入框
+        folder_selection_layout = QHBoxLayout()
+        self.folder_input_more2 = QLineEdit()
+        select_folder_btn_more2 = QPushButton("Select File")
+        select_folder_btn_more2.clicked.connect(self.select_folder_more2)
+        folder_selection_layout.addWidget(self.folder_input_more2)
+        folder_selection_layout.addWidget(select_folder_btn_more2)
+        more2_layout.addLayout(folder_selection_layout)
+
+        # 原始数据展示区域
+        self.original_display_more2 = QTextBrowser()
+        self.original_display_more2.setPlainText("Original Data Loading...")
+        more2_layout.addWidget(self.original_display_more2)
+
+        # 筛选按钮
+        filter_button = QPushButton('Filter Results')
+        filter_button.clicked.connect(self.filter_results_more2)
+        more2_layout.addWidget(filter_button)
+
+        # 筛选结果展示区域
+        self.results_display_more2 = QTextBrowser()
+        self.results_display_more2.setPlainText("Filtered Results Appear Here...")
+        more2_layout.addWidget(self.results_display_more2)
+
+        back_btn_more2 = QPushButton('Back', self.more2_widget)
+        back_btn_more2.clicked.connect(self.show_previous_ui)
+        more2_layout.addWidget(back_btn_more2)
+
+        self.stacked_widget.addWidget(self.more2_widget)
+
+    def show_previous_ui(self):
+        # 如果你已知返回的具体界面，可以直接设置索引
+        self.stacked_widget.setCurrentIndex(0)  # 假设主界面的索引是 0
+
+    def select_folder_more2(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select a text file", "",
+                                                   "Text Files (*.txt)", options=options)
+        if file_name:
+            self.folder_input_more2.setText(file_name)
+            self.load_file_data_more2(file_name)
+
+    def load_file_data_more2(self, file_path):
+        try:
+            with open(file_path, 'r') as file:
+                self.all_data_more2 = file.readlines()
+            self.original_display_more2.setPlainText(''.join(self.all_data_more2))
+        except FileNotFoundError:
+            self.original_display_more2.setPlainText("Selected file not found.")
+
+    def filter_results_more2(self):
+        try:
+            positions = [
+                int(self.position_combobox1_more2.currentText()) - 1,
+                int(self.position_combobox2_more2.currentText()) - 1,
+                int(self.position_combobox3_more2.currentText()) - 1
+            ]
+            target_numbers = [
+                int(self.input_number1_more2.text()),
+                int(self.input_number2_more2.text()),
+                int(self.input_number3_more2.text())
+            ]
+        except ValueError:
+            self.results_display_more2.setPlainText("请在所有字段中输入有效数字。")
+            return
+
+        non_filtered_results = []
+        for line in self.all_data_more2:
+            try:
+                _, data_str = line.split(':')
+                data = eval(data_str.strip())
+                for tuple in data:
+                    if not all(tuple[pos] == num for pos, num in zip(positions, target_numbers)):
+                        non_filtered_results.append(tuple)
+            except Exception as e:
+                self.results_display_more2.setPlainText(f"解析错误: {str(e)}")
+                return
+
+        if non_filtered_results:
+            result_display = "\n".join(', '.join(map(str, res)) for res in non_filtered_results)
+            self.results_display_more2.setPlainText(result_display)
+        else:
+            self.results_display_more2.setPlainText("未找到不符合条件的结果。")
+
+    def show_more2_ui(self):
+        # 确保已经初始化了 more2 界面
+        if not hasattr(self, 'more2_widget'):
+            self.init_more2_ui()
+
+        # 设置堆栈窗口小部件以显示新界面
+        self.stacked_widget.setCurrentWidget(self.more2_widget)
+
+
+
+    def show_solver_ui(self):
+        # 切换到求解界面
+        self.stacked_widget.setCurrentIndex(0)
 
     def select_folder(self):
         options = QFileDialog.Options()
