@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
         optimal_selection_layout = QVBoxLayout(self.optimal_selection_widget)
 
         # 添加标题
-        title_label = QLabel('AN OPTIMAL SAMPLES SELECTION SYSTEM')
+        title_label = QLabel('Custom filtering')
         title_label.setAlignment(Qt.AlignCenter)
         optimal_selection_layout.addWidget(title_label)
 
@@ -218,8 +218,7 @@ class MainWindow(QMainWindow):
         self.more2_widget = QWidget()
         more2_layout = QVBoxLayout(self.more2_widget)
 
-        # 标题
-        title_label = QLabel('Welcome to the more2 interface!', self.more2_widget)
+        title_label = QLabel('Range filtering', self.more2_widget)
         title_label.setAlignment(Qt.AlignCenter)
         more2_layout.addWidget(title_label)
 
@@ -233,14 +232,24 @@ class MainWindow(QMainWindow):
         selection_layout.addWidget(self.position_combobox3_more2)
         more2_layout.addLayout(selection_layout)
 
-        # 第二行输入框
+        # 第二行输入范围，使用两个 QLineEdit
         input_layout = QHBoxLayout()
-        self.input_number1_more2 = QLineEdit()
-        self.input_number2_more2 = QLineEdit()
-        self.input_number3_more2 = QLineEdit()
-        input_layout.addWidget(self.input_number1_more2)
-        input_layout.addWidget(self.input_number2_more2)
-        input_layout.addWidget(self.input_number3_more2)
+        self.input_range1_min = QLineEdit()
+        self.input_range1_max = QLineEdit()
+        self.input_range2_min = QLineEdit()
+        self.input_range2_max = QLineEdit()
+        self.input_range3_min = QLineEdit()
+        self.input_range3_max = QLineEdit()
+
+        input_layout.addWidget(self.input_range1_min)
+        input_layout.addWidget(QLabel("to"))
+        input_layout.addWidget(self.input_range1_max)
+        input_layout.addWidget(self.input_range2_min)
+        input_layout.addWidget(QLabel("to"))
+        input_layout.addWidget(self.input_range2_max)
+        input_layout.addWidget(self.input_range3_min)
+        input_layout.addWidget(QLabel("to"))
+        input_layout.addWidget(self.input_range3_max)
         more2_layout.addLayout(input_layout)
 
         # 文件选择按钮和输入框
@@ -259,7 +268,7 @@ class MainWindow(QMainWindow):
 
         # 筛选按钮
         filter_button = QPushButton('Filter Results')
-        filter_button.clicked.connect(self.filter_results_more2)
+        filter_button.clicked.connect(self.filter_results_range_more2)
         more2_layout.addWidget(filter_button)
 
         # 筛选结果展示区域
@@ -286,39 +295,39 @@ class MainWindow(QMainWindow):
             self.folder_input_more2.setText(file_name)
             self.load_file_data_more2(file_name)
 
-    def filter_results_more2(self):
+    def filter_results_range_more2(self):
         try:
             positions = [
                 int(self.position_combobox1_more2.currentText()) - 1,
                 int(self.position_combobox2_more2.currentText()) - 1,
                 int(self.position_combobox3_more2.currentText()) - 1
             ]
-            target_numbers = [
-                int(self.input_number1_more2.text()),
-                int(self.input_number2_more2.text()),
-                int(self.input_number3_more2.text())
+            ranges = [
+                (int(self.input_range1_min.text()), int(self.input_range1_max.text())),
+                (int(self.input_range2_min.text()), int(self.input_range2_max.text())),
+                (int(self.input_range3_min.text()), int(self.input_range3_max.text()))
             ]
-        except ValueError:
-            self.results_display_more2.setPlainText("请在所有字段中输入有效数字。")
+        except ValueError as e:
+            self.results_display_more2.setPlainText(f"Input error: {e}")
             return
 
-        non_filtered_results = []
+        filtered_results = []
         for line in self.all_data_more2:
             try:
                 _, data_str = line.split(':')
                 data = eval(data_str.strip())
                 for tuple in data:
-                    if not all(tuple[pos] == num for pos, num in zip(positions, target_numbers)):
-                        non_filtered_results.append(tuple)
+                    if all(r[0] <= tuple[pos] <= r[1] for pos, r in zip(positions, ranges)):
+                        filtered_results.append(tuple)
             except Exception as e:
-                self.results_display_more2.setPlainText(f"解析错误: {str(e)}")
+                self.results_display_more2.setPlainText(f"Error parsing data: {str(e)}")
                 return
 
-        if non_filtered_results:
-            result_display = "\n".join(', '.join(map(str, res)) for res in non_filtered_results)
+        if filtered_results:
+            result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
             self.results_display_more2.setPlainText(result_display)
         else:
-            self.results_display_more2.setPlainText("未找到不符合条件的结果。")
+            self.results_display_more2.setPlainText("No results found within specified ranges.")
 
     def show_more2_ui(self):
         # 确保已经初始化了 more2 界面
