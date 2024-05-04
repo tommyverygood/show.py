@@ -286,14 +286,6 @@ class MainWindow(QMainWindow):
             self.folder_input_more2.setText(file_name)
             self.load_file_data_more2(file_name)
 
-    def load_file_data_more2(self, file_path):
-        try:
-            with open(file_path, 'r') as file:
-                self.all_data_more2 = file.readlines()
-            self.original_display_more2.setPlainText(''.join(self.all_data_more2))
-        except FileNotFoundError:
-            self.original_display_more2.setPlainText("Selected file not found.")
-
     def filter_results_more2(self):
         try:
             positions = [
@@ -358,6 +350,15 @@ class MainWindow(QMainWindow):
             self.original_display.setPlainText(''.join(self.all_data))
         except FileNotFoundError:
             self.original_display.setPlainText("Selected file not found.")
+
+    def load_file_data_more2(self, file_path):
+        try:
+            with open(file_path, 'r') as file:
+                self.all_data_more2 = file.readlines()
+            self.original_display_more2.setPlainText(''.join(self.all_data_more2))
+        except FileNotFoundError:
+            self.original_display_more2.setPlainText("Selected file not found.")
+
 
     def show_optimal_selection_ui(self):
         # 显示新界面
@@ -461,6 +462,8 @@ class MainWindow(QMainWindow):
                     self.button_layout.addWidget(btn)
         except FileNotFoundError:
             self.display_text.setText("Database.txt not found.")
+
+
 
     def create_combobox(self, values):
         combobox = QComboBox()
