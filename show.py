@@ -1,65 +1,109 @@
 import random, glob, datetime, sys, itertools, math, time
-from collections import defaultdict
+from collections import defaultdict, deque
+from functools import lru_cache
+import concurrent.futures
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout,
                              QWidget, QTextEdit, QLineEdit, QComboBox, QHBoxLayout,
-                             QScrollArea, QTextBrowser, QStackedWidget, QLabel, QFileDialog)
+                             QScrollArea, QTextBrowser, QStackedWidget, QLabel, QFileDialog, QCheckBox, QMessageBox)
 
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 
+
+@lru_cache(None)
 def generate_combinations(elements, k):
     return list(itertools.combinations(elements, k))
 
-def subset_cover_graph(n_numbers, k, j, s):
-    j_subsets = generate_combinations(n_numbers, j)
-    k_combinations = generate_combinations(n_numbers, k)
-    cover_graph = defaultdict(list)
+
+def preprocess_subsets(j_subsets, k_combinations, s):
+    subset_dict = defaultdict(set)
     for k_comb in k_combinations:
-        for j_sub in j_subsets:
-            if any(set(subset).issubset(k_comb) for subset in generate_combinations(j_sub, s)):
-                cover_graph[tuple(k_comb)].append(tuple(j_sub))
-    return cover_graph
+        k_set = set(k_comb)
+        # 只考虑有高重叠或相关性的子集
+        relevant_j_subsets = filter(lambda j_sub: len(set(j_sub) & k_set) >= s - 1, j_subsets)
+        for j_sub in relevant_j_subsets:
+            s_combinations = itertools.combinations(j_sub, s)
+            if any(set(subset).issubset(k_set) for subset in s_combinations):
+                subset_dict[tuple(k_comb)].add(tuple(j_sub))
+    return subset_dict
 
-def all_j_subsets_covered(cover_graph, solution):
-    all_j_subsets = set(itertools.chain(*cover_graph.values()))
-    covered_j_subsets = set(itertools.chain(*[cover_graph[k] for k in solution]))
-    return covered_j_subsets == all_j_subsets
 
-def simulated_annealing(cover_graph, n_numbers, T=10000, T_min=0.001, alpha=0.99, time_limit=8):
-    start_time = time.time()
-    k_combinations = list(cover_graph.keys())
-    random.shuffle(k_combinations)
-    current_solution = k_combinations[:len(k_combinations)//4]
-    while not all_j_subsets_covered(cover_graph, current_solution):
-        current_solution.append(random.choice([k for k in k_combinations if k not in current_solution]))
-    current_energy = len(current_solution)
-    while T > T_min:
-        if time.time() - start_time > time_limit:
-            print("Switching to greedy algorithm due to time limit.")
-            return greedy_set_cover(cover_graph)
-        for _ in range(50):
-            new_solution = current_solution[:]
-            if random.random() > 0.5 and len(new_solution) > 1:
-                new_solution.remove(random.choice(new_solution))
-            else:
-                possible_additions = [k for k in k_combinations if k not in new_solution]
-                if possible_additions:
-                    new_solution.append(random.choice(possible_additions))
-            if all_j_subsets_covered(cover_graph, new_solution):
-                new_energy = len(new_solution)
-                if new_energy < current_energy or math.exp((current_energy - new_energy) / T) > random.random():
-                    current_solution = new_solution
-                    current_energy = new_energy
-        T *= alpha
-    return current_solution
+def subset_cover_graph(n_numbers, k, j, s):
+    j_subsets = generate_combinations(tuple(n_numbers), j)
+    k_combinations = generate_combinations(tuple(n_numbers), k)
+    return preprocess_subsets(j_subsets, k_combinations, s)
 
-def greedy_set_cover(cover_graph):
-    covered = set()
-    selected_k_combs = []
-    while any(j_sub not in covered for j_subsets in cover_graph.values() for j_sub in j_subsets):
-        best_k_comb = max(cover_graph, key=lambda k: len(set(cover_graph[k]) - covered))
-        selected_k_combs.append(best_k_comb)
-        covered.update(cover_graph[best_k_comb])
-    return selected_k_combs
+
+def evaluate_solution(solution, cover_graph):
+    covered_j_subsets = set(itertools.chain(*(cover_graph[k] for k in solution)))
+    return len(covered_j_subsets)
+
+
+def modify_solution(current_solution, cover_graph):
+    new_solution = current_solution[:]
+    if random.random() > 0.5 and len(new_solution) > 1:
+        new_solution.remove(random.choice(new_solution))
+    else:
+        k_combinations = list(cover_graph.keys())
+        possible_additions = [k for k in k_combinations if k not in new_solution]
+        if possible_additions:
+            new_solution.append(random.choice(possible_additions))
+    return new_solution
+
+
+def generate_good_neighbors(current_solution, cover_graph, current_score):
+    neighbors = []
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    futures = [executor.submit(modify_solution, current_solution, cover_graph) for _ in range(10)]
+    for future in concurrent.futures.as_completed(futures):
+        new_solution = future.result()
+        neighbor_score = evaluate_solution(new_solution, cover_graph)
+        if new_solution not in neighbors and new_solution != current_solution and neighbor_score > current_score:
+            neighbors.append(new_solution)
+    return neighbors
+
+
+def tabu_search(cover_graph, max_iterations=1000, tabu_size=10, max_tabu_tenure=5):
+    current_solution = initial_heuristic_solution(cover_graph)
+    best_solution = current_solution
+    tabu_list = deque(maxlen=tabu_size)
+    best_score = evaluate_solution(best_solution, cover_graph)
+    current_score = best_score
+    iteration = 0
+    scores = {tuple(current_solution): best_score}
+
+    while iteration < max_iterations:
+        neighbors = generate_good_neighbors(current_solution, cover_graph, current_score)
+        neighbors = [neighbor for neighbor in neighbors if tuple(neighbor) not in tabu_list]
+        if not neighbors:
+            break
+        best_neighbor = max(neighbors, key=lambda neighbor: scores.setdefault(tuple(neighbor),
+                                                                              evaluate_solution(neighbor, cover_graph)))
+        neighbor_score = scores[tuple(best_neighbor)]
+
+        if neighbor_score > current_score or tuple(best_neighbor) not in tabu_list:
+            current_solution = best_neighbor
+            current_score = neighbor_score
+            tabu_list.append(tuple(best_neighbor))
+
+        if neighbor_score > best_score:
+            best_solution = best_neighbor
+            best_score = neighbor_score
+
+        tabu_list = deque((tabu_item, tenure - 1) for tabu_item, tenure in tabu_list if tenure - 1 > 0)
+        iteration += 1
+
+    return best_solution
+
+
+def initial_heuristic_solution(cover_graph):
+    solution = []
+    uncovered_j_subsets = set(itertools.chain(*cover_graph.values()))
+    while uncovered_j_subsets:
+        best_k_comb = max(cover_graph, key=lambda k: len(set(cover_graph[k]) & uncovered_j_subsets))
+        solution.append(best_k_comb)
+        uncovered_j_subsets -= set(cover_graph[best_k_comb])
+    return solution
+
 
 def save_to_database(m, n, k, j, s, results):
     filename = f"{m}_{n}_{k}_{j}_{s}.txt"  # 直接使用参数值创建文件名
@@ -78,12 +122,16 @@ class AlgorithmWorker(QThread):
         self.k = k
         self.j = j
         self.s = s
+
     def run(self):
-        n_numbers = random.sample(range(1, self.m + 1), self.n)
-        cover_graph = subset_cover_graph(n_numbers, self.k, self.j, self.s)
-        result = simulated_annealing(cover_graph, n_numbers)
-        params = f"{self.m}-{self.n}-{self.k}-{self.j}-{self.s}"
-        self.finished.emit(n_numbers, result, params)
+        start_time = time.time()
+        cover_graph = subset_cover_graph(self.n, self.k, self.j, self.s)
+        solution = tabu_search(cover_graph)
+        end_time = time.time()  # 算法结束后记录时间
+        elapsed_time = end_time - start_time  # 计算运行时间
+        params = f"{self.m}-{len(self.n)}-{self.k}-{self.j}-{self.s}-{elapsed_time}"
+        self.finished.emit(self.n, solution, params)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -96,7 +144,9 @@ class MainWindow(QMainWindow):
         self.init_optimal_selection_ui()
         self.init_more3_ui()  # 确保这一行在这里，以初始化 more3 界面
         self.setCentralWidget(self.stacked_widget)
-        self.all_data = []  # 初始化数据存储列表
+        self.random_generation_needed = False
+        self.random_generated = False
+
     def init_solver_ui(self):
         self.solver_widget = QWidget()
         solver_layout = QVBoxLayout(self.solver_widget)
@@ -107,6 +157,12 @@ class MainWindow(QMainWindow):
         self.k_input = self.create_combobox(range(4, 11))
         self.j_input = self.create_combobox([])
         self.s_input = self.create_combobox([])
+
+        # Number input fields
+        self.number_inputs = [QLineEdit(self) for _ in range(25)]
+        self.random_checkbox = QCheckBox("Randomly Generate", self)
+        self.random_checkbox.setChecked(False)
+        self.random_checkbox.toggled.connect(self.toggle_number_inputs)
 
         self.k_input.currentIndexChanged.connect(self.update_j_options)
         self.j_input.currentIndexChanged.connect(self.update_s_options)
@@ -121,7 +177,18 @@ class MainWindow(QMainWindow):
         params_layout.addWidget(self.j_input)
         params_layout.addWidget(QLabel("s:"))
         params_layout.addWidget(self.s_input)
+        params_layout.addWidget(self.random_checkbox)
+
+        number_inputs_layout = QHBoxLayout()
+        for number_input in self.number_inputs:
+            number_input.setFixedWidth(40)
+            number_input.setEnabled(False)
+            number_inputs_layout.addWidget(number_input)
+
         solver_layout.addLayout(params_layout)
+        self.n_input.currentIndexChanged.connect(self.enable_number_inputs_based_on_n)
+
+        solver_layout.addLayout(number_inputs_layout)
 
         self.result_text_edit = QTextEdit()
         self.result_text_edit.setReadOnly(True)
@@ -142,6 +209,49 @@ class MainWindow(QMainWindow):
         solver_layout.addLayout(btn_layout)
         self.stacked_widget.addWidget(self.solver_widget)
 
+    def enable_number_inputs_based_on_n(self):
+        n_selected = int(self.n_input.currentText())
+        m_value = int(self.m_input.currentText()) if self.m_input.currentText() else 0
+
+        for i, number_input in enumerate(self.number_inputs):
+            if i < n_selected:
+                number_input.setEnabled(True)
+                number_input.setStyleSheet("color: black; background-color: white;")
+                if self.random_checkbox.isChecked() and not self.random_generated:
+                    number_input.setText(str(random.randint(1, m_value)))
+            else:
+                number_input.setEnabled(False)
+                number_input.setStyleSheet("color: white; background-color: black;")
+                number_input.clear()
+
+    def toggle_number_inputs(self, checked):
+        m_text = self.m_input.currentText()
+        n_text = self.n_input.currentText()
+
+        if checked and (not m_text or not n_text or not m_text.isdigit() or not n_text.isdigit()):
+            QMessageBox.warning(self, "Parameter Error", "Please select both m and n before randomly generating.",
+                                QMessageBox.Ok)
+            self.random_checkbox.setChecked(False)
+            return
+
+        self.random_generation_needed = checked
+
+        # 只有从关闭到开启时生成新的随机数
+        if checked and not self.random_generated:
+            self.random_generated = True
+            n_selected = int(n_text) if n_text.isdigit() else 0
+            m_value = int(m_text) if m_text.isdigit() else 0
+
+            for i, number_input in enumerate(self.number_inputs):
+                if i < n_selected:
+                    number_input.setText(str(random.randint(1, m_value)))
+
+        elif not checked:
+            self.random_generated = False
+
+        n_selected = int(n_text) if n_text.isdigit() else 0
+        for i, number_input in enumerate(self.number_inputs):
+            number_input.setEnabled(not checked if i < n_selected else False)
 
     def init_optimal_selection_ui(self):
         self.optimal_selection_widget = QWidget()
@@ -348,58 +458,58 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.more2_widget)
 
     def init_more3_ui(self):
-            self.more3_widget = QWidget()
-            more3_layout = QVBoxLayout(self.more3_widget)
+        self.more3_widget = QWidget()
+        more3_layout = QVBoxLayout(self.more3_widget)
 
-            title_label = QLabel('Expectation filtering', self.more3_widget)
-            title_label.setAlignment(Qt.AlignCenter)
-            more3_layout.addWidget(title_label)
+        title_label = QLabel('Expectation filtering', self.more3_widget)
+        title_label.setAlignment(Qt.AlignCenter)
+        more3_layout.addWidget(title_label)
 
-            # 第一行选择框
-            selection_layout = QHBoxLayout()
-            self.position_combobox1_more3 = self.create_number_combobox(1, 6)
-            self.position_combobox2_more3 = self.create_number_combobox(1, 6)
-            self.position_combobox3_more3 = self.create_number_combobox(1, 6)
-            selection_layout.addWidget(self.position_combobox1_more3)
-            selection_layout.addWidget(self.position_combobox2_more3)
-            selection_layout.addWidget(self.position_combobox3_more3)
-            more3_layout.addLayout(selection_layout)
+        # 第一行选择框
+        selection_layout = QHBoxLayout()
+        self.position_combobox1_more3 = self.create_number_combobox(1, 6)
+        self.position_combobox2_more3 = self.create_number_combobox(1, 6)
+        self.position_combobox3_more3 = self.create_number_combobox(1, 6)
+        selection_layout.addWidget(self.position_combobox1_more3)
+        selection_layout.addWidget(self.position_combobox2_more3)
+        selection_layout.addWidget(self.position_combobox3_more3)
+        more3_layout.addLayout(selection_layout)
 
-            # 第二行输入期望值
-            input_layout = QHBoxLayout()
-            self.target_sum_input = QLineEdit()
-            input_layout.addWidget(QLabel("Target Sum:"))
-            input_layout.addWidget(self.target_sum_input)
-            more3_layout.addLayout(input_layout)
+        # 第二行输入期望值
+        input_layout = QHBoxLayout()
+        self.target_sum_input = QLineEdit()
+        input_layout.addWidget(QLabel("Target Sum:"))
+        input_layout.addWidget(self.target_sum_input)
+        more3_layout.addLayout(input_layout)
 
-            folder_selection_layout = QHBoxLayout()
-            self.folder_input_more3 = QLineEdit()
-            select_folder_btn_more3 = QPushButton("Select File")
-            select_folder_btn_more3.clicked.connect(self.select_folder_more3)
-            folder_selection_layout.addWidget(self.folder_input_more3)
-            folder_selection_layout.addWidget(select_folder_btn_more3)
-            more3_layout.addLayout(folder_selection_layout)
+        folder_selection_layout = QHBoxLayout()
+        self.folder_input_more3 = QLineEdit()
+        select_folder_btn_more3 = QPushButton("Select File")
+        select_folder_btn_more3.clicked.connect(self.select_folder_more3)
+        folder_selection_layout.addWidget(self.folder_input_more3)
+        folder_selection_layout.addWidget(select_folder_btn_more3)
+        more3_layout.addLayout(folder_selection_layout)
 
-            # 筛选按钮
-            filter_button = QPushButton('Filter Results')
-            filter_button.clicked.connect(self.filter_results_more3)
-            more3_layout.addWidget(filter_button)
+        # 筛选按钮
+        filter_button = QPushButton('Filter Results')
+        filter_button.clicked.connect(self.filter_results_more3)
+        more3_layout.addWidget(filter_button)
 
-            self.original_display_more3 = QTextBrowser()
-            self.original_display_more3.setPlainText("Original Data Loading...")
-            more3_layout.addWidget(self.original_display_more3)
+        self.original_display_more3 = QTextBrowser()
+        self.original_display_more3.setPlainText("Original Data Loading...")
+        more3_layout.addWidget(self.original_display_more3)
 
-            # 结果展示区域
-            self.results_display_more3 = QTextBrowser()
-            self.results_display_more3.setPlainText("Results will appear here...")
-            more3_layout.addWidget(self.results_display_more3)
+        # 结果展示区域
+        self.results_display_more3 = QTextBrowser()
+        self.results_display_more3.setPlainText("Results will appear here...")
+        more3_layout.addWidget(self.results_display_more3)
 
-            # 返回按钮
-            back_btn_more3 = QPushButton('Back', self.more3_widget)
-            back_btn_more3.clicked.connect(self.show_previous_ui)
-            more3_layout.addWidget(back_btn_more3)
+        # 返回按钮
+        back_btn_more3 = QPushButton('Back', self.more3_widget)
+        back_btn_more3.clicked.connect(self.show_previous_ui)
+        more3_layout.addWidget(back_btn_more3)
 
-            self.stacked_widget.addWidget(self.more3_widget)
+        self.stacked_widget.addWidget(self.more3_widget)
 
     def select_folder_more3(self):
         options = QFileDialog.Options()
@@ -482,7 +592,6 @@ class MainWindow(QMainWindow):
         except FileNotFoundError:
             self.original_display_more2.setPlainText("Selected file not found.")
 
-
     def show_optimal_selection_ui(self):
         # 显示新界面
         self.stacked_widget.setCurrentWidget(self.optimal_selection_widget)
@@ -527,7 +636,6 @@ class MainWindow(QMainWindow):
         except ValueError:
             self.results_display.setPlainText("请在所有字段中输入有效数字。")
             return
-
 
         filtered_results = []
         for line in self.all_data:
@@ -586,14 +694,13 @@ class MainWindow(QMainWindow):
         except FileNotFoundError:
             self.display_text.setText("Database.txt not found.")
 
-
-
     def create_combobox(self, values):
         combobox = QComboBox()
         combobox.addItem("")  # Empty default option
         for value in values:
             combobox.addItem(str(value))
-        combobox.setFixedWidth(150)
+        combobox.setEditable(False)  # 禁止用户自行输入非数字内容
+        combobox.setFixedWidth(200)
         return combobox
 
     def update_result(self, n_numbers, result, params):
@@ -601,41 +708,67 @@ class MainWindow(QMainWindow):
         result_display = "\n".join(f"Combination {idx + 1}: {comb}" for idx, comb in enumerate(result))
 
         # 解析参数
-        m, n, k, j, s = params.split('-')
+        m, n, k, j, s, elapsed_time = params.split('-')
+        elapsed_time_str = f"Running time: {float(elapsed_time):.3f} s"
         # 保存结果并获取实际保存的文件名
         actual_filename = save_to_database(int(m), int(n), int(k), int(j), int(s), result)
 
         # 在文本框中显示结果和文件名
         self.result_text_edit.setText(
-            f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\nThe approximate minimal set cover of k samples combinations found:\n{result_display}\n\nFile saved as: {actual_filename}")
-    def start_thread(self):
-        m = int(self.m_input.currentText()) if self.m_input.currentText() else 0
-        n = int(self.n_input.currentText()) if self.n_input.currentText() else 0
-        k = int(self.k_input.currentText()) if self.k_input.currentText() else 0
-        j = int(self.j_input.currentText()) if self.j_input.currentText() else 0
-        s = int(self.s_input.currentText()) if self.s_input.currentText() else 0
+            f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\nThe approximate minimal set cover of k samples combinations found:\n{result_display}\n\n{elapsed_time_str}\n\nFile saved as: {actual_filename}")
 
-        if m > 0 and n > 0 and k > 0 and j > 0 and s > 0:
-            self.worker = AlgorithmWorker(m, n, k, j, s)
-            self.worker.finished.connect(self.update_result)
-            self.worker.start()
+    def start_thread(self):
+        m_text = self.m_input.currentText()
+        n_text = self.n_input.currentText()
+        k_text = self.k_input.currentText()
+        j_text = self.j_input.currentText()
+        s_text = self.s_input.currentText()
+
+        # Check if any of the values are empty or not numbers
+        if not (m_text.isdigit() and n_text.isdigit() and k_text.isdigit() and
+                j_text.isdigit() and s_text.isdigit()):
+            QMessageBox.warning(self, "Parameter Error", "Please select all parameters before starting.",
+                                QMessageBox.Ok)
+            return
+
+        m = int(m_text)
+        n = int(n_text)
+        k = int(k_text)
+        j = int(j_text)
+        s = int(s_text)
+
+        # Collect numbers from input fields
+        n_values = []
+        for input_field in self.number_inputs[:n]:
+            if input_field.text().isdigit():
+                n_values.append(int(input_field.text()))
+            else:
+                QMessageBox.warning(self, "Input Error", f"Please fill in all {n} input fields before starting.",
+                                    QMessageBox.Ok)
+                return
+
+        self.worker = AlgorithmWorker(m, n_values, k, j, s)
+        self.worker.finished.connect(self.update_result)
+        self.worker.start()
 
     def update_j_options(self):
         self.j_input.clear()
         k = int(self.k_input.currentText()) if self.k_input.currentText() else 0
-        self.j_input.addItems([str(i) for i in range(1, k+1)])
+        self.j_input.addItems([str(i) for i in range(1, k + 1)])
         self.update_s_options()
 
     def update_s_options(self):
         self.s_input.clear()
         j = int(self.j_input.currentText()) if self.j_input.currentText() else 0
-        self.s_input.addItems([str(i) for i in range(1, j+1)])
+        self.s_input.addItems([str(i) for i in range(1, j + 1)])
+
 
 def clear_layout(layout):
     while layout.count():
         child = layout.takeAt(0)
         if child.widget():
             child.widget().deleteLater()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
