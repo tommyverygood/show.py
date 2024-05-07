@@ -13,7 +13,6 @@ from PyQt5.QtCore import pyqtSignal, QThread, Qt
 def generate_combinations(elements, k):
     return list(itertools.combinations(elements, k))
 
-
 def preprocess_subsets(j_subsets, k_combinations, s):
     subset_dict = defaultdict(set)
     for k_comb in k_combinations:
