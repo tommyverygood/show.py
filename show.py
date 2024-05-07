@@ -106,10 +106,10 @@ def initial_heuristic_solution(cover_graph):
 
 
 def save_to_database(m, n, k, j, s, results):
-    filename = f"{m}_{n}_{k}_{j}_{s}.txt"  # 直接使用参数值创建文件名
+    filename = f"{m}_{n}_{k}_{j}_{s}.txt"
     with open(filename, "w") as f:
         f.write(f"{m}, {n}, {k}, {j}, {s}: {results}\n")
-    return filename  # 返回生成的文件名以便于其他地方使用
+    return filename
 
 
 class AlgorithmWorker(QThread):
@@ -128,7 +128,7 @@ class AlgorithmWorker(QThread):
         cover_graph = subset_cover_graph(self.n, self.k, self.j, self.s)
         solution = tabu_search(cover_graph)
         end_time = time.time()  # 算法结束后记录时间
-        elapsed_time = end_time - start_time  # 计算运行时间
+        elapsed_time = end_time - start_time
         params = f"{self.m}-{len(self.n)}-{self.k}-{self.j}-{self.s}-{elapsed_time}"
         self.finished.emit(self.n, solution, params)
 
@@ -142,7 +142,7 @@ class MainWindow(QMainWindow):
         self.init_solver_ui()
         self.init_database_ui()
         self.init_optimal_selection_ui()
-        self.init_more3_ui()  # 确保这一行在这里，以初始化 more3 界面
+        self.init_more3_ui()
         self.setCentralWidget(self.stacked_widget)
         self.random_generation_needed = False
         self.random_generated = False
@@ -202,8 +202,8 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(start_btn)
         btn_layout.addWidget(database_btn)
 
-        way_btn = QPushButton('more', self)  # 新按钮
-        way_btn.clicked.connect(self.show_optimal_selection_ui)  # 连接到新界面显示的方法
+        way_btn = QPushButton('more', self)
+        way_btn.clicked.connect(self.show_optimal_selection_ui)
         btn_layout.addWidget(way_btn)
 
         solver_layout.addLayout(btn_layout)
@@ -236,7 +236,6 @@ class MainWindow(QMainWindow):
 
         self.random_generation_needed = checked
 
-        # 只有从关闭到开启时生成新的随机数
         if checked and not self.random_generated:
             self.random_generated = True
             n_selected = int(n_text) if n_text.isdigit() else 0
@@ -257,12 +256,10 @@ class MainWindow(QMainWindow):
         self.optimal_selection_widget = QWidget()
         optimal_selection_layout = QVBoxLayout(self.optimal_selection_widget)
 
-        # 添加标题
         title_label = QLabel('Custom filtering')
         title_label.setAlignment(Qt.AlignCenter)
         optimal_selection_layout.addWidget(title_label)
 
-        # 第一行选择框
         selection_layout = QHBoxLayout()
         self.position_combobox1 = self.create_number_combobox(1, 6)
         self.position_combobox2 = self.create_number_combobox(1, 6)
@@ -272,7 +269,6 @@ class MainWindow(QMainWindow):
         selection_layout.addWidget(self.position_combobox3)
         optimal_selection_layout.addLayout(selection_layout)
 
-        # 第二行输入框
         input_layout = QHBoxLayout()
         self.input_number1 = QLineEdit()
         self.input_number2 = QLineEdit()
@@ -282,7 +278,6 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.input_number3)
         optimal_selection_layout.addLayout(input_layout)
 
-        # 添加文件夹选择按钮和输入框
         folder_selection_layout = QHBoxLayout()
         self.folder_input = QLineEdit()
         select_folder_btn = QPushButton("Select Folder")
@@ -292,17 +287,17 @@ class MainWindow(QMainWindow):
 
         optimal_selection_layout.addLayout(folder_selection_layout)
 
-        # 筛选按钮
+        self.reverse_filter_checkbox = QCheckBox("启用反向筛选", self.optimal_selection_widget)
+        optimal_selection_layout.addWidget(self.reverse_filter_checkbox)
+
         filter_button = QPushButton('Filter Results')
         filter_button.clicked.connect(self.filter_results)
         optimal_selection_layout.addWidget(filter_button)
 
-        # 原始数列展示区域
         self.original_display = QTextBrowser()
         self.original_display.setPlainText("Original Data Loading...")
         optimal_selection_layout.addWidget(self.original_display)
 
-        # 筛选结果展示区域
         self.results_display = QTextBrowser()
         self.results_display.setPlainText("Filtered Results Appear Here...")
         optimal_selection_layout.addWidget(self.results_display)
@@ -310,8 +305,8 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.optimal_selection_widget)
 
         self.load_original_data()
-        back_btn = QPushButton('Back', self)  # 按钮文本设置为 "Back"
-        back_btn.clicked.connect(self.show_solver_ui)  # 点击后调用 show_solver_ui 函数
+        back_btn = QPushButton('Back', self)
+        back_btn.clicked.connect(self.show_solver_ui)
         optimal_selection_layout.addWidget(back_btn)
 
         self.stacked_widget.addWidget(self.optimal_selection_widget)
@@ -319,7 +314,6 @@ class MainWindow(QMainWindow):
         button_layout = QHBoxLayout()
         optimal_selection_layout.addLayout(button_layout)
 
-        # 添加新的 "more2" 按钮
         more2_btn = QPushButton('more2', self)
         more2_btn.clicked.connect(self.show_more2_ui)
         button_layout.addWidget(more2_btn)
@@ -334,7 +328,6 @@ class MainWindow(QMainWindow):
         title_label.setAlignment(Qt.AlignCenter)
         more2_layout.addWidget(title_label)
 
-        # 第一行选择框
         selection_layout = QHBoxLayout()
         self.position_combobox1_more2 = self.create_number_combobox(1, 6)
         self.position_combobox2_more2 = self.create_number_combobox(1, 6)
@@ -344,7 +337,6 @@ class MainWindow(QMainWindow):
         selection_layout.addWidget(self.position_combobox3_more2)
         more2_layout.addLayout(selection_layout)
 
-        # 第二行输入范围，使用两个 QLineEdit
         input_layout = QHBoxLayout()
         self.input_range1_min = QLineEdit()
         self.input_range1_max = QLineEdit()
@@ -364,7 +356,9 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.input_range3_max)
         more2_layout.addLayout(input_layout)
 
-        # 文件选择按钮和输入框
+        self.reverse_filter_checkbox_more2 = QCheckBox("启用反向筛选", self.more2_widget)
+        more2_layout.addWidget(self.reverse_filter_checkbox_more2)
+
         folder_selection_layout = QHBoxLayout()
         self.folder_input_more2 = QLineEdit()
         select_folder_btn_more2 = QPushButton("Select File")
@@ -373,17 +367,14 @@ class MainWindow(QMainWindow):
         folder_selection_layout.addWidget(select_folder_btn_more2)
         more2_layout.addLayout(folder_selection_layout)
 
-        # 筛选按钮
         filter_button = QPushButton('Filter Results')
         filter_button.clicked.connect(self.filter_results_range_more2)
         more2_layout.addWidget(filter_button)
 
-        # 原始数据展示区域
         self.original_display_more2 = QTextBrowser()
         self.original_display_more2.setPlainText("Original Data Loading...")
         more2_layout.addWidget(self.original_display_more2)
 
-        # 筛选结果展示区域
         self.results_display_more2 = QTextBrowser()
         self.results_display_more2.setPlainText("Filtered Results Appear Here...")
         more2_layout.addWidget(self.results_display_more2)
@@ -393,7 +384,6 @@ class MainWindow(QMainWindow):
         back_btn_more2.clicked.connect(self.show_previous_ui)
         button_layout.addWidget(back_btn_more2)
 
-        # 添加新的 "more3" 按钮
         more3_btn = QPushButton('more3', self.more2_widget)
         more3_btn.clicked.connect(self.show_more3_ui)
         button_layout.addWidget(more3_btn)
@@ -403,8 +393,7 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.more2_widget)
 
     def show_previous_ui(self):
-        # 如果你已知返回的具体界面，可以直接设置索引
-        self.stacked_widget.setCurrentIndex(0)  # 假设主界面的索引是 0
+        self.stacked_widget.setCurrentIndex(0)
 
     def select_folder_more2(self):
         options = QFileDialog.Options()
@@ -428,26 +417,28 @@ class MainWindow(QMainWindow):
                 (int(self.input_range3_min.text()), int(self.input_range3_max.text()))
             ]
         except ValueError as e:
-            self.results_display_more2.setPlainText(f"Input error: {e}")
+            self.results_display_more2.setPlainText(f"输入错误: {e}")
             return
 
+        reverse_filter = self.reverse_filter_checkbox_more2.isChecked()
         filtered_results = []
         for line in self.all_data_more2:
             try:
                 _, data_str = line.split(':')
                 data = eval(data_str.strip())
                 for tuple in data:
-                    if all(r[0] <= tuple[pos] <= r[1] for pos, r in zip(positions, ranges)):
+                    matches = all(r[0] <= tuple[pos] <= r[1] for pos, r in zip(positions, ranges))
+                    if matches and not reverse_filter or not matches and reverse_filter:
                         filtered_results.append(tuple)
             except Exception as e:
-                self.results_display_more2.setPlainText(f"Error parsing data: {str(e)}")
+                self.results_display_more2.setPlainText(f"解析数据出错: {str(e)}")
                 return
 
         if filtered_results:
             result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
             self.results_display_more2.setPlainText(result_display)
         else:
-            self.results_display_more2.setPlainText("No results found within specified ranges.")
+            self.results_display_more2.setPlainText("在指定范围内未找到结果。")
 
     def show_more2_ui(self):
         # 确保已经初始化了 more2 界面
@@ -611,9 +602,9 @@ class MainWindow(QMainWindow):
                     file_data = file.read().strip().split('\n')
                     for line in file_data:
                         if line:
-                            self.all_data.append(line)  # 确保添加的是字符串
+                            self.all_data.append(line)
             except FileNotFoundError:
-                continue  # 如果文件未找到，跳过
+                continue
 
         if self.all_data:
             self.original_display.setPlainText("\n\n".join(self.all_data))
@@ -622,7 +613,6 @@ class MainWindow(QMainWindow):
 
     def filter_results(self):
         try:
-            # 从用户输入中提取位置和目标数字
             positions = [
                 int(self.position_combobox1.currentText()) - 1,
                 int(self.position_combobox2.currentText()) - 1,
@@ -637,15 +627,15 @@ class MainWindow(QMainWindow):
             self.results_display.setPlainText("请在所有字段中输入有效数字。")
             return
 
+        reverse_filter = self.reverse_filter_checkbox.isChecked()
         filtered_results = []
         for line in self.all_data:
             try:
-                # 从每一行中解析出数据部分
                 _, data_str = line.split(':')
                 data = eval(data_str.strip())  # 安全风险，仅在可信数据上使用
-                # 筛选匹配的序列
                 for tuple in data:
-                    if all(tuple[pos] == num for pos, num in zip(positions, target_numbers)):
+                    match = all(tuple[pos] == num for pos, num in zip(positions, target_numbers))
+                    if (match and not reverse_filter) or (not match and reverse_filter):
                         filtered_results.append(tuple)
             except Exception as e:
                 self.results_display.setPlainText(f"解析错误: {str(e)}")
@@ -699,21 +689,16 @@ class MainWindow(QMainWindow):
         combobox.addItem("")  # Empty default option
         for value in values:
             combobox.addItem(str(value))
-        combobox.setEditable(False)  # 禁止用户自行输入非数字内容
+        combobox.setEditable(False)  #
         combobox.setFixedWidth(200)
         return combobox
 
     def update_result(self, n_numbers, result, params):
-        self.all_data.append(result)  # 添加新结果到列表
+        self.all_data.append(result)
         result_display = "\n".join(f"Combination {idx + 1}: {comb}" for idx, comb in enumerate(result))
-
-        # 解析参数
         m, n, k, j, s, elapsed_time = params.split('-')
         elapsed_time_str = f"Running time: {float(elapsed_time):.3f} s"
-        # 保存结果并获取实际保存的文件名
         actual_filename = save_to_database(int(m), int(n), int(k), int(j), int(s), result)
-
-        # 在文本框中显示结果和文件名
         self.result_text_edit.setText(
             f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\nThe approximate minimal set cover of k samples combinations found:\n{result_display}\n\n{elapsed_time_str}\n\nFile saved as: {actual_filename}")
 
@@ -736,8 +721,6 @@ class MainWindow(QMainWindow):
         k = int(k_text)
         j = int(j_text)
         s = int(s_text)
-
-        # Collect numbers from input fields
         n_values = []
         for input_field in self.number_inputs[:n]:
             if input_field.text().isdigit():
