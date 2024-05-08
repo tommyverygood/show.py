@@ -149,10 +149,11 @@ class MainWindow(QMainWindow):
         self.init_database_ui()
         self.init_optimal_selection_ui()
         self.init_more2_ui()
-        self.init_more3_ui()  # 确保这一行在这里，以初始化 more3 界面
+        self.init_more3_ui()
         self.setCentralWidget(self.stacked_widget)
         self.random_generation_needed = False
         self.random_generated = False
+        self.all_data = []
 
     def init_solver_ui(self):
         self.solver_widget = QWidget()
