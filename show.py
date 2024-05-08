@@ -209,8 +209,8 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(start_btn)
         btn_layout.addWidget(database_btn)
 
-        way_btn = QPushButton('more', self)  # 新按钮
-        way_btn.clicked.connect(self.show_optimal_selection_ui)  # 连接到新界面显示的方法
+        way_btn = QPushButton('Specific value Filtering', self)
+        way_btn.clicked.connect(self.show_optimal_selection_ui)
         btn_layout.addWidget(way_btn)
 
         solver_layout.addLayout(btn_layout)
@@ -601,6 +601,7 @@ class MainWindow(QMainWindow):
 
     def show_optimal_selection_ui(self):
         # 显示新界面
+        self.setWindowTitle('Specific value Filtering')
         self.stacked_widget.setCurrentWidget(self.optimal_selection_widget)
 
     def create_number_combobox(self, min_value, max_value):
