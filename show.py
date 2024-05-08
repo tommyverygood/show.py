@@ -1,4 +1,4 @@
-import random, glob, datetime, sys, itertools, math, time
+import random, glob, datetime, sys, itertools, math, time, os
 from collections import defaultdict, deque
 from itertools import combinations
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout,
@@ -95,11 +95,15 @@ def initial_heuristic_solution(cover_graph):
 
 
 def save_to_database(m, n, k, j, s, results):
-    filename = f"{m}_{n}_{k}_{j}_{s}.txt"  # 直接使用参数值创建文件名
+    # 确保 DB 文件夹存在
+    directory = "DB"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    # 创建文件名，包含路径
+    filename = f"{directory}/{m}_{n}_{k}_{j}_{s}.txt"
     with open(filename, "w") as f:
         f.write(f"{m}, {n}, {k}, {j}, {s}: {results}\n")
     return filename  # 返回生成的文件名以便于其他地方使用
-
 
 class AlgorithmWorker(QThread):
     finished = pyqtSignal(list, list, str)
@@ -271,7 +275,7 @@ class MainWindow(QMainWindow):
 
     def load_data(self):
         clear_layout(self.button_layout)
-        file_pattern = '*_*_*_*_*.txt'
+        file_pattern = 'DB/*_*_*_*_*.txt'  # 修改文件路径，指向DB文件夹
         files = glob.glob(file_pattern)
 
         for filename in files:
