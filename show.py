@@ -149,12 +149,10 @@ class MainWindow(QMainWindow):
         self.init_database_ui()
         self.init_optimal_selection_ui()
         self.init_more2_ui()
-        self.init_more3_ui()
+        self.init_more3_ui()  # 确保这一行在这里，以初始化 more3 界面
         self.setCentralWidget(self.stacked_widget)
         self.random_generation_needed = False
         self.random_generated = False
-        self.all_data = []
-        self.all_data_more2 = []
 
     def init_solver_ui(self):
         self.solver_widget = QWidget()
@@ -211,7 +209,7 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(start_btn)
         btn_layout.addWidget(database_btn)
 
-        way_btn = QPushButton('Specific value Filtering', self)  # 新按钮
+        way_btn = QPushButton('more', self)  # 新按钮
         way_btn.clicked.connect(self.show_optimal_selection_ui)  # 连接到新界面显示的方法
         btn_layout.addWidget(way_btn)
 
@@ -379,7 +377,7 @@ class MainWindow(QMainWindow):
         optimal_selection_layout.addWidget(back_btn)
 
         # 添加新的 "more2" 按钮
-        back_btn = QPushButton('Range Filtering', self)
+        back_btn = QPushButton('more2', self)
         back_btn.clicked.connect(self.show_more2_ui)
         button_layout.addWidget(back_btn)
         optimal_selection_layout.addWidget(back_btn)
@@ -454,7 +452,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(back_btn_more2)
 
         # 添加新的 "more3" 按钮
-        more3_btn = QPushButton('Sum filtering', self.more2_widget)
+        more3_btn = QPushButton('more3', self.more2_widget)
         more3_btn.clicked.connect(self.show_more3_ui)
         button_layout.addWidget(more3_btn)
 
@@ -487,23 +485,21 @@ class MainWindow(QMainWindow):
 
         reverse_filter = self.reverse_filter_checkbox_more2.isChecked()
         filtered_results = []
-        for line in self.all_data_more2:
-            try:
-                _, data_str = line.split(':')
-                data = eval(data_str.strip())
-                for tuple in data:
-                    matches = all(r[0] <= tuple[pos] <= r[1] for pos, r in zip(positions, ranges))
-                    if matches and not reverse_filter or not matches and reverse_filter:
-                        filtered_results.append(tuple)
-            except Exception as e:
-                self.results_display_more2.setPlainText(f"Parsing data error: {str(e)}")
-                return
+        try:
+            data = eval(self.singleton.current_text.strip())
+            for tuple in data:
+                matches = all(r[0] <= tuple[pos] <= r[1] for pos, r in zip(positions, ranges))
+                if matches and not reverse_filter or not matches and reverse_filter:
+                    filtered_results.append(tuple)
+        except Exception as e:
+            self.results_display_more2.setPlainText(f"Error parsing data: {str(e)}")
+            return
 
         if filtered_results:
             result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
             self.results_display_more2.setPlainText(result_display)
         else:
-            self.results_display_more2.setPlainText("No result found within the specified range.")
+            self.results_display_more2.setPlainText("No results found within the specified range.")
 
     def show_more2_ui(self):
         # 确保已经初始化了 more2 界面
@@ -626,28 +622,26 @@ class MainWindow(QMainWindow):
                 int(self.input_number3.text())
             ]
         except ValueError:
-            self.results_display.setPlainText("Please enter valid numbers in all fields.")
+            self.results_display.setPlainText("请在所有字段中输入有效数字。")
             return
 
         reverse_filter = self.reverse_filter_checkbox.isChecked()
         filtered_results = []
-        for line in self.all_data:
-            try:
-                _, data_str = line.split(':')
-                data = eval(data_str.strip())  # 安全风险，仅在可信数据上使用
-                for tuple in data:
-                    match = all(tuple[pos] == num for pos, num in zip(positions, target_numbers))
-                    if (match and not reverse_filter) or (not match and reverse_filter):
-                        filtered_results.append(tuple)
-            except Exception as e:
-                self.results_display.setPlainText(f"Parsing error: {str(e)}")
-                return
+        try:
+            data = eval(self.singleton.current_text.strip())
+            for tuple in data:
+                matches = all(tuple[pos] == num for pos, num in zip(positions, target_numbers))
+                if (matches and not reverse_filter) or (not matches and reverse_filter):
+                    filtered_results.append(tuple)
+        except Exception as e:
+            self.results_display.setPlainText(f"解析错误: {str(e)}")
+            return
 
         if filtered_results:
             result_display = "\n".join(', '.join(map(str, res)) for res in filtered_results)
             self.results_display.setPlainText(result_display)
         else:
-            self.results_display.setPlainText("No matching results were found")
+            self.results_display.setPlainText("未找到符合条件的结果。")
 
     def init_database_ui(self):
         self.database_widget = QWidget()
