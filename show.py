@@ -687,7 +687,6 @@ class MainWindow(QMainWindow):
             save_msg = f"\nFile saved as: {actual_filename}"
         else:
             save_msg = "\nSaving file was skipped by user choice."
-
         # 更新文本编辑框以显示结果和保存状态
         self.result_text_edit.setText(
             f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\n"
