@@ -377,7 +377,7 @@ class MainWindow(QMainWindow):
         optimal_selection_layout.addWidget(back_btn)
 
         # 添加新的 "more2" 按钮
-        back_btn = QPushButton('more2', self)
+        back_btn = QPushButton('Range Filtering', self)
         back_btn.clicked.connect(self.show_more2_ui)
         button_layout.addWidget(back_btn)
         optimal_selection_layout.addWidget(back_btn)
@@ -387,7 +387,6 @@ class MainWindow(QMainWindow):
     def init_more2_ui(self):
         self.more2_widget = QWidget()
         more2_layout = QVBoxLayout(self.more2_widget)
-
         title_label = QLabel('Range filtering', self.more2_widget)
         title_label.setAlignment(Qt.AlignCenter)
         more2_layout.addWidget(title_label)
@@ -452,7 +451,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(back_btn_more2)
 
         # 添加新的 "more3" 按钮
-        more3_btn = QPushButton('more3', self.more2_widget)
+        more3_btn = QPushButton('Sum filtering', self.more2_widget)
         more3_btn.clicked.connect(self.show_more3_ui)
         button_layout.addWidget(more3_btn)
 
@@ -502,11 +501,7 @@ class MainWindow(QMainWindow):
             self.results_display_more2.setPlainText("No results found within the specified range.")
 
     def show_more2_ui(self):
-        # 确保已经初始化了 more2 界面
-        if not hasattr(self, 'more2_widget'):
-            self.init_more2_ui()
-
-        # 设置堆栈窗口小部件以显示新界面
+        self.setWindowTitle('Range Filtering')
         self.stacked_widget.setCurrentWidget(self.more2_widget)
 
     def init_more3_ui(self):
@@ -591,8 +586,7 @@ class MainWindow(QMainWindow):
             self.results_display_more3.setPlainText("No results found matching the target sum.")
 
     def show_more3_ui(self):
-        if not hasattr(self, 'more3_widget'):
-            self.init_more3_ui()  # 如果 more3_widget 未初始化，则先初始化
+        self.setWindowTitle('Sum filtering')
         self.stacked_widget.setCurrentWidget(self.more3_widget)
 
     def show_solver_ui(self):
