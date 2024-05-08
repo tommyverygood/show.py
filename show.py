@@ -368,15 +368,15 @@ class MainWindow(QMainWindow):
         self.load_original_data()
 
         button_layout = QHBoxLayout()
-        back_btn = QPushButton('Back to Solver', self)  # 按钮文本设置为 "Back"
-        back_btn.clicked.connect(self.show_solver_ui)  # 点击后调用 show_solver_ui 函数
+        back_btn = QPushButton('Back to Solver', self)
+        back_btn.clicked.connect(self.show_solver_ui)
         optimal_selection_layout.addWidget(back_btn)
 
-        back_btn = QPushButton('Back to Database', self)  # 按钮文本设置为 "Back"
-        back_btn.clicked.connect(self.show_solver_ui)  # 点击后调用 show_solver_ui 函数
+        back_btn = QPushButton('Back to Database', self)
+        back_btn.clicked.connect(self.show_solver_ui)
         optimal_selection_layout.addWidget(back_btn)
 
-        # 添加新的 "more2" 按钮
+        # 添加新的按钮
         back_btn = QPushButton('Range Filtering', self)
         back_btn.clicked.connect(self.show_more2_ui)
         button_layout.addWidget(back_btn)
@@ -434,7 +434,7 @@ class MainWindow(QMainWindow):
         self.original_display_more2.setPlainText("Original Data Loading...")
         more2_layout.addWidget(self.original_display_more2)
 
-        # 筛选结果展示区域
+        # 展示区域
         self.results_display_more2 = QTextBrowser()
         self.results_display_more2.setPlainText("Filtered Results Appear Here...")
         more2_layout.addWidget(self.results_display_more2)
@@ -450,7 +450,7 @@ class MainWindow(QMainWindow):
         back_btn_more2.clicked.connect(self.show_Database_ui)
         button_layout.addWidget(back_btn_more2)
 
-        # 添加新的 "more3" 按钮
+        # 添加新的按钮
         more3_btn = QPushButton('Sum filtering', self.more2_widget)
         more3_btn.clicked.connect(self.show_more3_ui)
         button_layout.addWidget(more3_btn)
@@ -460,8 +460,7 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.more2_widget)
 
     def show_previous_ui(self):
-        # 如果你已知返回的具体界面，可以直接设置索引
-        self.stacked_widget.setCurrentIndex(0)  # 假设主界面的索引是 0
+        self.stacked_widget.setCurrentIndex(0)
 
     def show_Database_ui(self):
         self.stacked_widget.setCurrentIndex(1)
@@ -590,11 +589,9 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.more3_widget)
 
     def show_solver_ui(self):
-        # 切换到求解界面
         self.stacked_widget.setCurrentIndex(0)
 
     def show_optimal_selection_ui(self):
-        # 显示新界面
         self.setWindowTitle('Specific value Filtering')
         self.stacked_widget.setCurrentWidget(self.optimal_selection_widget)
 
@@ -666,25 +663,24 @@ class MainWindow(QMainWindow):
 
     def create_combobox(self, values):
         combobox = QComboBox()
-        combobox.addItem("")  # Empty default option
+        combobox.addItem("")
         for value in values:
             combobox.addItem(str(value))
-        combobox.setEditable(False)  # 禁止用户自行输入非数字内容
+        combobox.setEditable(False)
         combobox.setFixedWidth(200)
         return combobox
 
     def update_result(self, n_numbers, result, params):
         self.all_data = []
-        self.all_data.append(result)  # 添加新结果到列表
+        self.all_data.append(result)
         result_display = "\n".join(f"Combination {idx + 1}: {comb}" for idx, comb in enumerate(result))
 
         # 解析参数
         m, n, k, j, s, elapsed_time = params.split('-')
         elapsed_time_str = f"Running time: {float(elapsed_time):.3f} s"
-        # 保存结果并获取实际保存的文件名
+
         actual_filename = save_to_database(int(m), int(n), int(k), int(j), int(s), result)
 
-        # 在文本框中显示结果和文件名
         self.result_text_edit.setText(
             f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\nThe approximate minimal set cover of k samples combinations found:\n{result_display}\n\n{elapsed_time_str}\n\nFile saved as: {actual_filename}")
         self.load_data()
