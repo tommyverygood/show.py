@@ -157,6 +157,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.stacked_widget)
         self.random_generation_needed = False
         self.random_generated = False
+        self.save_to_db_checkbox = QCheckBox("Save Results", self)
+        self.save_to_db_checkbox.setChecked(True)  # 默认选中
 
     def init_solver_ui(self):
         self.solver_widget = QWidget()
@@ -675,18 +677,24 @@ class MainWindow(QMainWindow):
         return combobox
 
     def update_result(self, n_numbers, result, params):
-        self.all_data = []
-        self.all_data.append(result)
-        result_display = "\n".join(f"Combination {idx + 1}: {comb}" for idx, comb in enumerate(result))
-
         # 解析参数
         m, n, k, j, s, elapsed_time = params.split('-')
         elapsed_time_str = f"Running time: {float(elapsed_time):.3f} s"
+        result_display = "\n".join(f"Combination {idx + 1}: {comb}" for idx, comb in enumerate(result))
 
-        actual_filename = save_to_database(int(m), int(n), int(k), int(j), int(s), result)
+        # 检查是否应该保存结果到数据库
+        if self.save_to_db_checkbox.isChecked():
+            actual_filename = save_to_database(int(m), int(n), int(k), int(j), int(s), result)
+            save_msg = f"\nFile saved as: {actual_filename}"
+        else:
+            save_msg = "\nSaving file was skipped by user choice."
 
+        # 更新文本编辑框以显示结果和保存状态
         self.result_text_edit.setText(
-            f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\nThe approximate minimal set cover of k samples combinations found:\n{result_display}\n\n{elapsed_time_str}\n\nFile saved as: {actual_filename}")
+            f"Randomly selected n={len(n_numbers)} numbers: {n_numbers}\n\n"
+            f"The approximate minimal set cover of k samples combinations found:\n{result_display}\n\n"
+            f"{elapsed_time_str}{save_msg}"
+        )
         self.load_data()
 
     def start_thread(self):
