@@ -154,6 +154,7 @@ class MainWindow(QMainWindow):
         self.random_generation_needed = False
         self.random_generated = False
         self.all_data = []
+        self.all_data_more2 = []
 
     def init_solver_ui(self):
         self.solver_widget = QWidget()
